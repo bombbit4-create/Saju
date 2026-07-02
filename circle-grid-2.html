@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>오행 원형도</title>
+<style>
+  :root{
+    --bg: #f5f3ec;
+    --panel: #ffffff;
+    --line: #d8d4c4;
+    --paper: #ffffff;
+    --ink: #2a2a22;
+    --dim: #7a7768;
+    --accent: #a97e1f;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family: 'Courier New', ui-monospace, monospace;
+    display:flex;
+    justify-content:center;
+    padding:28px 16px 60px;
+  }
+  .wrap{ width:100%; max-width:720px; }
+  h1{
+    font-size:15px;
+    letter-spacing:.28em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 4px;
+    font-weight:600;
+  }
+  .sub{
+    font-size:11px;
+    color:var(--dim);
+    letter-spacing:.05em;
+    margin:0 0 24px;
+    border-bottom:1px solid var(--line);
+    padding-bottom:16px;
+  }
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    padding:20px;
+    margin-bottom:16px;
+  }
+  .label{
+    font-size:10px;
+    letter-spacing:.15em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin-bottom:10px;
+  }
+  .inputs{
+    display:grid;
+    grid-template-columns:1fr;
+    gap:10px;
+  }
+  .field{
+    display:flex;
+    align-items:center;
+    border:1px solid var(--line);
+    background:#faf9f4;
+  }
+  .field span{
+    font-size:10px;
+    color:var(--dim);
+    padding:0 10px;
+    border-right:1px solid var(--line);
+    white-space:nowrap;
+    letter-spacing:.05em;
+  }
+  .field input{
+    flex:1;
+    min-width:0;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:var(--ink);
+    font-family:inherit;
+    font-size:22px;
+    font-weight:700;
+    padding:12px 10px;
+  }
+  .field.err{ border-color:#a4482c; }
+  .msg{
+    font-size:11px;
+    color:#c96b4a;
+    min-height:14px;
+    margin-top:8px;
+  }
+  .row{
+    display:flex;
+    gap:10px;
+    margin-top:14px;
+  }
+  button{
+    font-family:inherit;
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    padding:11px 16px;
+    background:transparent;
+    border:1px solid var(--dim);
+    color:var(--ink);
+    cursor:pointer;
+    transition:.15s;
+  }
+  button.primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#1b1c16;
+    font-weight:700;
+  }
+  button:hover{ opacity:.8; }
+  button:disabled{ opacity:.35; cursor:not-allowed; }
+  .canvas-panel{
+    background:#ffffff;
+    border:1px solid var(--line);
+    padding:14px;
+    display:flex;
+    justify-content:center;
+  }
+  canvas{
+    width:100%;
+    max-width:520px;
+    height:auto;
+    display:block;
+  }
+  .legend{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:8px;
+    margin-top:14px;
+    font-size:10px;
+  }
+  .legend div{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--dim);
+  }
+  .swatch{
+    width:10px; height:10px;
+    border:1px solid var(--line);
+    flex:none;
+  }
+  .hist-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:10px 0;
+    border-bottom:1px solid var(--line);
+    font-size:12px;
+  }
+  .hist-item:last-child{ border-bottom:none; }
+  .hist-nums{ letter-spacing:.03em; color:var(--ink); }
+  .hist-time{ color:var(--dim); font-size:10px; }
+  .hist-actions button{ padding:5px 10px; font-size:10px; margin-left:6px; }
+  .empty{ color:var(--dim); font-size:11px; padding:6px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>오행 원형도 · Circle Grid</h1>
+  <div class="sub">3×3 그리드(20×20mm) 위 외접원 4개 + 내접원 1개 · 숫자의 계절에 따라 색이 정해집니다</div>
+
+  <div class="panel">
+    <div class="label">숫자 입력 (1~64 . 1~6)</div>
+    <div class="inputs">
+      <div class="field" id="f0"><span>원1 상단</span><input id="in0" placeholder="예: 43.2" inputmode="decimal"></div>
+      <div class="field" id="f1"><span>원2 우측</span><input id="in1" placeholder="예: 2.1" inputmode="decimal"></div>
+      <div class="field" id="f2"><span>원3 좌측</span><input id="in2" placeholder="예: 13.5" inputmode="decimal"></div>
+      <div class="field" id="f3"><span>원4 하단</span><input id="in3" placeholder="예: 7.4" inputmode="decimal"></div>
+    </div>
+    <div class="msg" id="msg"></div>
+    <div class="row">
+      <button class="primary" id="drawBtn">그리기</button>
+      <button id="downloadBtn" disabled>이미지 다운로드</button>
+    </div>
+    <div class="legend">
+      <div><span class="swatch" style="background:#000000"></span>겨울</div>
+      <div><span class="swatch" style="background:#208000"></span>봄</div>
+      <div><span class="swatch" style="background:#ff0000"></span>여름</div>
+      <div><span class="swatch" style="background:#dfdfdf"></span>가을</div>
+    </div>
+  </div>
+
+  <div class="canvas-panel">
+    <canvas id="cv"></canvas>
+  </div>
+
+  <div class="panel" style="margin-top:16px;">
+    <div class="label" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>히스토리</span>
+      <button id="clearHistBtn" style="padding:4px 8px;font-size:9px;">전체 삭제</button>
+    </div>
+    <div id="histList"><div class="empty">기록이 없습니다.</div></div>
+  </div>
+</div>
+
+<script>
+const SEASONS = [
+  { name:'겨울', nums:[1,43,14,34,9,5,26,11,10,58,38,54,61,60,41,19], color:'#000000', text:'#ffffff' },
+  { name:'봄',   nums:[13,49,30,55,37,63,22,36,25,17,21,51,42,3,27,24], color:'#208000', text:'#000000' },
+  { name:'여름', nums:[2,23,8,20,16,35,45,12,15,52,39,53,62,56,31,33], color:'#ff0000', text:'#000000' },
+  { name:'가을', nums:[7,4,29,59,40,64,47,6,46,18,48,57,32,50,28,44], color:'#dfdfdf', text:'#000000' },
+];
+function seasonOf(intPart){
+  for(const s of SEASONS){ if(s.nums.includes(intPart)) return s; }
+  return null;
+}
+
+// geometry, in mm
+const CELL = 20;
+const MARGIN = 12;
+const GRID = CELL*3;
+const CANVAS_MM = GRID + MARGIN*2;
+const SCALE = 15; // px per mm
+const cv = document.getElementById('cv');
+cv.width = CANVAS_MM*SCALE;
+cv.height = CANVAS_MM*SCALE;
+const ctx = cv.getContext('2d');
+
+function cellCenter(row,col){
+  return {
+    x: MARGIN + (col-0.5)*CELL,
+    y: MARGIN + (row-0.5)*CELL
+  };
+}
+const CIRC_R = (CELL*Math.SQRT2)/2; // circumscribed radius
+const INSC_R = CELL/2;              // inscribed radius
+
+const POSITIONS = [
+  { row:1, col:2 }, // 원1 상단
+  { row:2, col:3 }, // 원2 우측
+  { row:2, col:1 }, // 원3 좌측
+  { row:3, col:2 }, // 원4 하단
+];
+
+function mm(v){ return v*SCALE; }
+
+function drawCircle(cx, cy, r, fill){
+  ctx.beginPath();
+  ctx.arc(mm(cx), mm(cy), mm(r), 0, Math.PI*2);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.lineWidth = 1.5;
+  ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+  ctx.stroke();
+}
+
+function drawNumberText(cx, cy, intPart, decPart, color){
+  const diameter = CIRC_R*2;
+  const bigMm = diameter*0.70*0.70;
+  const smallMm = bigMm*0.60;
+  const bigPx = mm(bigMm);
+  const smallPx = mm(smallMm);
+
+  ctx.textBaseline = 'alphabetic';
+  ctx.textAlign = 'left';
+
+  ctx.font = `700 ${bigPx}px Georgia, serif`;
+  const intW = ctx.measureText(intPart).width;
+  ctx.font = `700 ${smallPx}px Georgia, serif`;
+  const decStr = '.' + decPart;
+  const decW = ctx.measureText(decStr).width;
+
+  const totalW = intW + decW;
+  const startX = mm(cx) - totalW/2;
+
+  // baseline: center the big glyph's cap-height on cy, align small text to same baseline
+  const baselineY = mm(cy) + bigPx*0.34;
+
+  ctx.fillStyle = color;
+  ctx.font = `700 ${bigPx}px Georgia, serif`;
+  ctx.fillText(intPart, startX, baselineY);
+
+  ctx.font = `700 ${smallPx}px Georgia, serif`;
+  ctx.fillText(decStr, startX + intW, baselineY);
+}
+
+function render(values){
+  ctx.clearRect(0,0,cv.width,cv.height);
+  // paper background
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,cv.width,cv.height);
+
+  // circle 5: center inscribed circle, yellow, drawn first (bottom)
+  const c5 = cellCenter(2,2);
+  drawCircle(c5.x, c5.y, INSC_R, '#ffff00');
+
+  // circles 1-4: circumscribed circles at N/W/E/S, with season fill + number
+  values.forEach((v, i) => {
+    const pos = POSITIONS[i];
+    const c = cellCenter(pos.row, pos.col);
+    const season = seasonOf(v.intPart);
+    const fill = season ? season.color : '#999999';
+    const textColor = season ? season.text : '#ffffff';
+    drawCircle(c.x, c.y, CIRC_R, fill);
+    drawNumberText(c.x, c.y, String(v.intPart), String(v.decPart), textColor);
+  });
+}
+
+// ---- input parsing / validation ----
+function parseInput(raw){
+  const t = (raw||'').trim();
+  const m = t.match(/^(\d{1,2})\.([1-6])$/);
+  if(!m) return null;
+  const intPart = parseInt(m[1],10);
+  const decPart = parseInt(m[2],10);
+  if(intPart < 1 || intPart > 64) return null;
+  return { intPart, decPart };
+}
+
+const inputs = [0,1,2,3].map(i => document.getElementById('in'+i));
+const fields = [0,1,2,3].map(i => document.getElementById('f'+i));
+const msg = document.getElementById('msg');
+const drawBtn = document.getElementById('drawBtn');
+const downloadBtn = document.getElementById('downloadBtn');
+const histList = document.getElementById('histList');
+const clearHistBtn = document.getElementById('clearHistBtn');
+
+let lastValues = null;
+let historyCache = [];
+
+drawBtn.addEventListener('click', async () => {
+  msg.textContent = '';
+  const values = [];
+  let hasError = false;
+  inputs.forEach((el, i) => {
+    const parsed = parseInput(el.value);
+    fields[i].classList.toggle('err', !parsed);
+    if(!parsed) hasError = true;
+    values.push(parsed);
+  });
+  if(hasError){
+    msg.textContent = '형식: 정수(1~64).소수(1~6) 예) 43.2';
+    return;
+  }
+  render(values);
+  lastValues = values;
+  downloadBtn.disabled = false;
+  await saveHistory(values);
+});
+
+downloadBtn.addEventListener('click', () => {
+  cv.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g,'-');
+    a.href = url;
+    a.download = `circle-grid-${ts}.png`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }, 'image/png');
+});
+
+// ---- history (persistent, personal) ----
+const HIST_KEY = 'circle-grid-history';
+
+async function loadHistory(){
+  try{
+    const res = await window.storage.get(HIST_KEY, false);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){
+    return [];
+  }
+}
+
+async function saveHistory(values){
+  historyCache.unshift({
+    values: values.map(v => `${v.intPart}.${v.decPart}`),
+    time: new Date().toLocaleString('ko-KR')
+  });
+  if(historyCache.length > 200) historyCache = historyCache.slice(0, 200);
+  renderHistory(historyCache);
+  try{
+    await window.storage.set(HIST_KEY, JSON.stringify(historyCache), false);
+    msg.textContent = '';
+  }catch(e){
+    msg.textContent = '이 화면을 벗어나면 히스토리가 사라질 수 있습니다 (저장소 접근 실패).';
+  }
+}
+
+function renderHistory(list){
+  if(!list || list.length === 0){
+    histList.innerHTML = '<div class="empty">기록이 없습니다.</div>';
+    return;
+  }
+  histList.innerHTML = '';
+  list.forEach((entry, idx) => {
+    const row = document.createElement('div');
+    row.className = 'hist-item';
+    row.innerHTML = `
+      <div>
+        <div class="hist-nums">${entry.values.join(' · ')}</div>
+        <div class="hist-time">${entry.time}</div>
+      </div>
+      <div class="hist-actions">
+        <button data-idx="${idx}" class="reuse">불러오기</button>
+      </div>
+    `;
+    histList.appendChild(row);
+  });
+  histList.querySelectorAll('.reuse').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const entry = historyCache[parseInt(btn.dataset.idx,10)];
+      if(!entry) return;
+      entry.values.forEach((v,i) => { inputs[i].value = v; fields[i].classList.remove('err'); });
+      drawBtn.click();
+    });
+  });
+}
+
+clearHistBtn.addEventListener('click', async () => {
+  if(!confirm('히스토리를 전체 삭제할까요? 되돌릴 수 없습니다.')) return;
+  historyCache = [];
+  try{ await window.storage.set(HIST_KEY, JSON.stringify([]), false); }catch(e){}
+  renderHistory([]);
+});
+
+// initial paint: empty grid preview (just the yellow center circle)
+ctx.clearRect(0,0,cv.width,cv.height);
+ctx.fillStyle = '#ffffff';
+ctx.fillRect(0,0,cv.width,cv.height);
+{
+  const c5 = cellCenter(2,2);
+  drawCircle(c5.x, c5.y, INSC_R, '#ffff00');
+}
+
+(async () => {
+  historyCache = await loadHistory();
+  renderHistory(historyCache);
+})();
+</script>
+</body>
+</html>
